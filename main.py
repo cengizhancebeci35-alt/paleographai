@@ -10,8 +10,8 @@ load_dotenv()
 app = FastAPI(title="PaleographAI", version="1.0.0")
 
 # API key kontrolü
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
+api_key = os.getenv("OPENAI_API_KEY", "senin_api_key")
+if not api_key or api_key == "senin_api_key":
     raise ValueError("OPENAI_API_KEY ortam değişkeni ayarlanmamış!")
 
 client = OpenAI(api_key=api_key)
