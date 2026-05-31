@@ -23,17 +23,19 @@ logger = logging.getLogger(__name__)
 # ---------------- AI VISION ----------------
 def vision(image_b64):
     try:
+        print("VISION STARTED")
+
         res = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "Return ONLY valid JSON with keys: script, period, transcription, confidence, notes"
+                    "content": "Return JSON only."
                 },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Analyze manuscript image"},
+                        {"type": "text", "text": "Analyze image"},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -45,20 +47,13 @@ def vision(image_b64):
             ]
         )
 
-        content = res.choices[0].message.content
+        print("OPENAI RESPONSE RECEIVED")
 
-        try:
-            return json.loads(content)
-        except:
-            return {
-                "script": "unknown",
-                "period": "unknown",
-                "transcription": content,
-                "confidence": 0.5,
-                "notes": "raw response (JSON parse failed)"
-            }
+        return {"raw": res.choices[0].message.content}
 
     except Exception as e:
+        print("ERROR:", str(e))
+
         return {
             "error": "vision_failed",
             "message": str(e)
