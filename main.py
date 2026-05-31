@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
-import base64, os, json
+import base64, os, json, re
 from openai import OpenAI
 from dotenv import load_dotenv
 import logging
@@ -20,40 +20,49 @@ client = OpenAI(api_key=api_key)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ---------------- HELPERS ----------------
+def safe_json_extract(text):
+    try:
+        return json.loads(text)
+    except:
+        # JSON yakala (GPT bozulursa bile)
+        match = re.search(r"\{.*\}", text, re.S)
+        if match:
+            try:
+                return json.loads(match.group())
+            except:
+                pass
+        return {
+            "raw": text,
+            "warning": "invalid_json"
+        }
+
 # ---------------- AI VISION ----------------
 def vision(image_b64):
-    try:
-        print("VISION STARTED")
-
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Return JSON only."
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Analyze image"},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_b64}"
-                            }
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Return ONLY valid JSON: {script, period, transcription, confidence, notes}"
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analyze manuscript image"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_b64}"
                         }
-                    ]
-                }
-            ]
-        )
+                    }
+                ]
+            }
+        ]
+    )
 
-        print("OPENAI RESPONSE RECEIVED")
-
-        return {"raw": res.choices[0].message.content}
-
-    except Exception as e:
-        print("FULL ERROR:", str(e))
-        return {"error": str(e)}
+    content = res.choices[0].message.content
+    return safe_json_extract(content)
 
 # ---------------- API ----------------
 @app.post("/analyze")
