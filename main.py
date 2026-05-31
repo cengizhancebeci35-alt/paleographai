@@ -1,7 +1,5 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, UploadFile, File
 import base64, os, json
-import numpy as np
 from openai import OpenAI
 from dotenv import load_dotenv
 import logging
@@ -23,16 +21,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ---------------- AI VISION ----------------
-def vision(image_b64: str) -> dict:
-    """
-    Manuscript görüntüsünü analiz et ve metadata döndür.
-    
-    Args:
-        image_b64: Base64 encoded görüntü
-        
-    Returns:
-        dict: script, period, transcription, confidence, notes
-    """
+def vision(image_b64):
     try:
         res = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -44,40 +33,36 @@ def vision(image_b64: str) -> dict:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Analyze this manuscript image carefully"},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+                        {"type": "text", "text": "Analyze manuscript image"},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_b64}"
+                            }
+                        }
                     ]
                 }
-            ],
-            temperature=0.3
+            ]
         )
-        
+
         content = res.choices[0].message.content
-        
+
         try:
             return json.loads(content)
-        except json.JSONDecodeError as e:
-            logger.warning(f"JSON parse failed: {e}. Raw content: {content[:100]}")
+        except:
             return {
                 "script": "unknown",
                 "period": "unknown",
                 "transcription": content,
                 "confidence": 0.5,
-                "notes": "JSON parse failed, raw output returned"
+                "notes": "raw response (JSON parse failed)"
             }
-        except Exception as e:
-            logger.error(f"Unexpected error while parsing response: {e}")
-            return {
-                "script": "error",
-                "period": "error",
-                "transcription": "",
-                "confidence": 0.0,
-                "notes": f"Unexpected error: {str(e)}"
-            }
-        
+
     except Exception as e:
-        logger.error(f"Vision API error: {e}")
-        raise
+        return {
+            "error": "vision_failed",
+            "message": str(e)
+        }
 
 # ---------------- API ----------------
 @app.post("/analyze")
