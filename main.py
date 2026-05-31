@@ -39,30 +39,38 @@ def safe_json_extract(text):
 
 # ---------------- AI VISION ----------------
 def vision(image_b64):
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": "Return ONLY valid JSON: {script, period, transcription, confidence, notes}"
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Analyze manuscript image"},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_b64}"
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Return ONLY valid JSON with keys: script, period, transcription, confidence, notes"
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analyze this manuscript image."},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_b64}"
+                            }
                         }
-                    }
-                ]
-            }
-        ]
-    )
+                    ]
+                }
+            ]
+        )
 
-    content = res.choices[0].message.content
-    return safe_json_extract(content)
+        content = response.choices[0].message.content
+        return safe_json_extract(content)
+
+    except Exception as e:
+        logger.error(f"Vision API error: {str(e)}")
+        return {
+            "error": "vision_failed",
+            "message": str(e)
+        }
 
 # ---------------- API ----------------
 @app.post("/analyze")
@@ -83,6 +91,7 @@ async def analyze(file: UploadFile = File(...)):
         return result
 
     except Exception as e:
+        logger.error(f"Analyze endpoint error: {str(e)}")
         return {
             "error": "analyze_failed",
             "message": str(e)
