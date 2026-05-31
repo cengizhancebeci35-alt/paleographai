@@ -52,12 +52,8 @@ def vision(image_b64):
         return {"raw": res.choices[0].message.content}
 
     except Exception as e:
-        print("ERROR:", str(e))
-
-        return {
-            "error": "vision_failed",
-            "message": str(e)
-        }
+        print("FULL ERROR:", str(e))
+        return {"error": str(e)}
 
 # ---------------- API ----------------
 @app.post("/analyze")
