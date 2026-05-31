@@ -86,27 +86,20 @@ async def analyze(file: UploadFile = File(...)):
     Manuscript görüntüsünü yükle ve analiz et.
     """
     try:
-        # Dosya türü kontrolü
-        if not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Sadece görüntü dosyaları kabul edilir")
-        
-        # Dosya boyutu kontrolü (10MB)
-        MAX_SIZE = 10 * 1024 * 1024
         img = await file.read()
-        
-        if len(img) > MAX_SIZE:
-            raise HTTPException(status_code=413, detail="Dosya çok büyük (max 10MB)")
-        
+
+        if not img:
+            return {"error": "empty_file"}
+
         b64 = base64.b64encode(img).decode()
+
         result = vision(b64)
+
         return result
 
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Analyze endpoint error: {e}")
         return {
-            "error": "analysis_failed",
+            "error": "analyze_failed",
             "message": str(e)
         }
 
