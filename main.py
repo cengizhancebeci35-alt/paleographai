@@ -85,27 +85,30 @@ async def analyze(file: UploadFile = File(...)):
     """
     Manuscript görüntüsünü yükle ve analiz et.
     """
-    # Dosya türü kontrolü
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Sadece görüntü dosyaları kabul edilir")
-    
-    # Dosya boyutu kontrolü (10MB)
-    MAX_SIZE = 10 * 1024 * 1024
-    content = await file.read()
-    
-    if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=413, detail="Dosya çok büyük (max 10MB)")
-    
     try:
-        b64 = base64.b64encode(content).decode()
-        result = vision(b64)
-        return JSONResponse(content=result)
+        # Dosya türü kontrolü
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Sadece görüntü dosyaları kabul edilir")
         
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        # Dosya boyutu kontrolü (10MB)
+        MAX_SIZE = 10 * 1024 * 1024
+        img = await file.read()
+        
+        if len(img) > MAX_SIZE:
+            raise HTTPException(status_code=413, detail="Dosya çok büyük (max 10MB)")
+        
+        b64 = base64.b64encode(img).decode()
+        result = vision(b64)
+        return result
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Analyze endpoint error: {e}")
-        raise HTTPException(status_code=500, detail="İşlem sırasında hata oluştu")
+        return {
+            "error": "analysis_failed",
+            "message": str(e)
+        }
 
 @app.get("/health")
 async def health():
