@@ -53,12 +53,28 @@ def vision(image_b64: str) -> dict:
         )
         
         content = res.choices[0].message.content
-        result = json.loads(content)
-        return result
         
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parse error: {e}")
-        raise ValueError("AI yanıtı geçerli JSON formatında değil")
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON parse failed: {e}. Raw content: {content[:100]}")
+            return {
+                "script": "unknown",
+                "period": "unknown",
+                "transcription": content,
+                "confidence": 0.5,
+                "notes": "JSON parse failed, raw output returned"
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error while parsing response: {e}")
+            return {
+                "script": "error",
+                "period": "error",
+                "transcription": "",
+                "confidence": 0.0,
+                "notes": f"Unexpected error: {str(e)}"
+            }
+        
     except Exception as e:
         logger.error(f"Vision API error: {e}")
         raise
